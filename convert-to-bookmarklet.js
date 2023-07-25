@@ -1,5 +1,6 @@
 const fs = require('fs');
 const util = require('util');
+const readline = require('readline');
 
 const readFile = util.promisify(fs.readFile);
 const fileExists = util.promisify(fs.exists);
@@ -10,13 +11,20 @@ async function convertJSFileToBookmarklet(filePath) {
             throw new Error(`File does not exist: ${filePath}`);
         }
 
-        const content = await readFile(filePath, 'utf-8');
+        let content = await readFile(filePath, 'utf-8');
 
         if (!content || !content.trim()) {
             throw new Error(`File is empty or only contains whitespace: ${filePath}`);
         }
 
-        const bookmarklet = encodeURIComponent(`javascript:(function(){${content}})()`);
+        // Check if the content already starts with 'javascript:(function ()'
+        if (!content.trim().match(/^javascript\s*:\s*\(function\s*\(\)\s*\)/)) {
+            // If it doesn't, wrap it
+            content = `javascript:(function(){${content.trim()}})()`;
+        }
+
+        // Encode everything except 'javascript:'
+        const bookmarklet = 'javascript:' + encodeURIComponent(content.slice(11));
 
         console.log(bookmarklet);
 
@@ -29,5 +37,12 @@ async function convertJSFileToBookmarklet(filePath) {
     }
 }
 
-// Use the script
-convertJSFileToBookmarklet('/Users/ajamal/Documents/Other-Coding-Stuff/Bookmarlets/youtube-music-hide-video.js');
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+rl.question('Enter the file path: ', (filePath) => {
+    convertJSFileToBookmarklet(filePath);
+    rl.close();
+});
